@@ -1,0 +1,24 @@
+{
+  "name": "na-storone-zakona-bots",
+  "version": "1.0.0",
+  "description": "Telegram- и MAX-боты записи к адвокату для коллегии «На стороне Закона»",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:init": "node src/db/init.js",
+    "db:seed": "node src/db/seed.js",
+    "db:setup": "npm run db:init && npm run db:seed",
+    "test": "node test/flow.test.mjs && node test/concurrency.test.mjs && node test/adapters.test.mjs"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@maxhub/max-bot-api": "^0.2.5",
+    "dotenv": "^17.4.2",
+    "grammy": "^1.45.1",
+    "nodemailer": "^9.0.3",
+    "pg": "^8.22.0"
+  },
+  "type": "module",
+  "private": true
+}
