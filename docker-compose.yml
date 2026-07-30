@@ -1,0 +1,58 @@
+name: na-storone-zakona
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lawyers_bot
+      POSTGRES_PASSWORD: lawyers_bot
+      POSTGRES_DB: lawyers_bot
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    # порт наружу не публикуем: база доступна только контейнерам
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lawyers_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bot:
+    build: ./lawyers-bot
+    restart: unless-stopped
+    env_file:
+      - ./lawyers-bot/.env
+    environment:
+      DATABASE_URL: postgres://lawyers_bot:lawyers_bot@db:5432/lawyers_bot
+    # применяем миграции и запускаем бота
+    command: sh -c "node dist/database/migrate.js && node dist/app.js"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./client:/usr/share/nginx/html:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - bot
+
+  # выпуск/продление сертификата Let's Encrypt (запускать по требованию, см. DEPLOY.md)
+  certbot:
+    image: certbot/certbot
+    profiles: ["certs"]
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+volumes:
+  db_data:
+  certbot_certs:
+  certbot_www:
