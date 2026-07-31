@@ -469,6 +469,11 @@ footer.site-footer{border-top:1px solid var(--line);background:rgba(8,9,10,.85);
 @media(max-width:560px){
   .wrap{padding:0 20px}.nav-inner{padding:0 20px}
   .hero h1{font-size:2.2rem}.sec-head h2{font-size:1.7rem}.page-hero h1{font-size:2.1rem}.founders-text h2{font-size:1.7rem}
+  /* на телефоне эмблема и название — крупнее: это единственный якорь бренда в шапке */
+  .nav-brand{gap:10px}
+  .nav-brand img,.nav-brand svg{width:40px;height:40px}
+  .nav-brand .bt b{font-size:1.04rem}
+  .nav-brand .bt span{font-size:.58rem;letter-spacing:.16em}
   /* компактнее, но не ниже тач-минимума 44px */
   .btn-primary{padding:12px 22px;font-size:.85rem}
   .btn-primary.sm{padding:9px 16px;font-size:.78rem}
@@ -488,8 +493,8 @@ footer.site-footer{border-top:1px solid var(--line);background:rgba(8,9,10,.85);
   .nav-inner{padding:0 14px;gap:10px;height:60px}
   .nav-links{top:60px;padding:10px 14px 16px}
   .nav-brand{min-width:0}
-  .nav-brand img,.nav-brand svg{width:28px;height:28px}
-  .nav-brand .bt b{font-size:.8rem}
+  .nav-brand img,.nav-brand svg{width:42px;height:42px}
+  .nav-brand .bt b{font-size:1.08rem}
   .nav-brand .bt span{display:none}
   .nav-cta{display:none}
   .nav-burger{padding:8px 0;margin-left:auto}
