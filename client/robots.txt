@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /_arhiv-uslugi/
+Disallow: /achievements_in/
+Disallow: /achievements_sv/
+
+# Яндекс: канонический адрес сайта
+User-agent: Yandex
+Allow: /
+Disallow: /_arhiv-uslugi/
+Disallow: /achievements_in/
+Disallow: /achievements_sv/
+Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content&yclid&gclid&from
+
+Sitemap: https://ns-zakona.ru/sitemap.xml

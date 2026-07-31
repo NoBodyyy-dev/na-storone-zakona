@@ -524,3 +524,23 @@ footer.site-footer{border-top:1px solid var(--line);background:rgba(8,9,10,.85);
   .prof-hero h1{font-size:1.45rem}
   h1,h2,h3,h4{overflow-wrap:break-word}
 }
+
+/* ---- FAQ (частые вопросы) ---- */
+.faq{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq-item{background:linear-gradient(180deg,rgba(71,74,76,.42),rgba(61,64,66,.2));border:1px solid var(--line);border-radius:8px;overflow:hidden;transition:border-color .25s}
+.faq-item[open]{border-color:rgba(194,160,82,.42)}
+.faq-item summary{cursor:pointer;list-style:none;padding:18px 52px 18px 22px;position:relative;
+  font-family:var(--font-display);font-size:1.04rem;font-weight:600;color:var(--white);line-height:1.45;min-height:44px;display:flex;align-items:center}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary:hover{color:var(--gold-bright)}
+.faq-item summary::after{content:"";position:absolute;right:22px;top:50%;width:11px;height:11px;
+  border-right:1.8px solid var(--gold);border-bottom:1.8px solid var(--gold);
+  transform:translateY(-70%) rotate(45deg);transition:transform .25s}
+.faq-item[open] summary::after{transform:translateY(-30%) rotate(225deg)}
+.faq-a{padding:0 22px 20px;color:var(--muted);font-size:.94rem;line-height:1.72}
+.faq-a p{margin:0}
+@media(max-width:560px){
+  .faq-item summary{font-size:.97rem;padding:16px 46px 16px 18px}
+  .faq-a{padding:0 18px 18px;font-size:.9rem}
+}
+@media(prefers-reduced-motion:reduce){.faq-item,.faq-item summary::after{transition:none}}

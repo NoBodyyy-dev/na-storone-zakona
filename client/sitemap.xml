@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://ns-zakona.ru/</loc>
+    <lastmod>2026-07-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image><image:loc>https://ns-zakona.ru/assets/og-cover.jpg</image:loc>
+      <image:title>Коллегия адвокатов «На стороне Закона», Краснодар</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://ns-zakona.ru/advokaty</loc>
+    <lastmod>2026-07-31</lastmod><changefreq>monthly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ns-zakona.ru/advokat-bogdanov</loc>
+    <lastmod>2026-07-31</lastmod><changefreq>monthly</changefreq><priority>0.9</priority>
+    <image:image><image:loc>https://ns-zakona.ru/assets/team/bogdanov.jpg</image:loc>
+      <image:title>Адвокат Богданов Сергей Владимирович, Краснодар</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://ns-zakona.ru/advokat-bogdanova</loc>
+    <lastmod>2026-07-31</lastmod><changefreq>monthly</changefreq><priority>0.9</priority>
+    <image:image><image:loc>https://ns-zakona.ru/assets/team/bogdanova.jpg</image:loc>
+      <image:title>Адвокат Богданова Ирина Николаевна, Краснодар</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://ns-zakona.ru/ceny</loc>
+    <lastmod>2026-07-31</lastmod><changefreq>monthly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ns-zakona.ru/o-kollegii</loc>
+    <lastmod>2026-07-31</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ns-zakona.ru/kontakty</loc>
+    <lastmod>2026-07-31</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+</urlset>
