@@ -110,7 +110,7 @@ const lawyer = {
   role: 'Председатель коллегии',
   specialization: 'уголовные и арбитражные дела',
   categories: ['criminal', 'arbitration', 'civil'],
-  office_address: 'г. Краснодар, ул. Бабушкина, 248',
+  office_address: 'г. Краснодар, ул. Бабушкина, 248, оф. А218',
 } as unknown as Lawyer;
 
 beforeEach(() => {

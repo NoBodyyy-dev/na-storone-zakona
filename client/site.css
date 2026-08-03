@@ -432,6 +432,11 @@ footer.site-footer{border-top:1px solid var(--line);background:rgba(8,9,10,.85);
 .foot-col a:hover{color:var(--gold)}
 .foot-bottom{padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:.76rem}
 .foot-bottom a:hover{color:var(--gold)}
+/* строка разработчика — самый низ, приглушённый серый */
+.foot-dev{margin-top:14px;font-size:.7rem;color:#7c7f83;line-height:1.5;
+  font-variant-numeric:lining-nums tabular-nums}
+.foot-dev a{color:inherit}
+.foot-dev a:hover{color:var(--muted)}
 
 /* ---- lightbox ---- */
 .lb{position:fixed;inset:0;z-index:100;background:rgba(6,7,8,.94);display:none;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
