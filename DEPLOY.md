@@ -16,6 +16,12 @@ git clone git@github.com:NoBodyyy-dev/na-storone-zakona.git
 cd na-storone-zakona
 ```
 
+Создать `.env` в корне (пароль базы, файл не хранится в git):
+
+```bash
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" > .env
+```
+
 Создать `lawyers-bot/.env` (файл не хранится в git):
 
 ```bash
@@ -27,10 +33,29 @@ nano lawyers-bot/.env
 
 ```
 BOT_TOKEN=<токен от @BotFather>
+ADMIN_IDS=<telegram id администраторов через запятую>
 PORT=3000
 TZ_NAME=Europe/Moscow
+MAX_ACTIVE_BOOKINGS=2
 # DATABASE_URL задаётся в docker-compose, в .env можно не указывать
 # WEBHOOK_URL — оставить пустым (long polling) или https://ДОМЕН/webhook
+# WEBHOOK_SECRET — обязателен вместе с WEBHOOK_URL: openssl rand -hex 32
+```
+
+**Если база уже была поднята со старым паролем `lawyers_bot`** (volume `db_data`
+существует), новый пароль из `.env` сам по себе не применится — Postgres берёт
+`POSTGRES_PASSWORD` только при первом создании базы. Смените пароль вручную:
+
+```bash
+docker compose exec db psql -U lawyers_bot -c "ALTER USER lawyers_bot PASSWORD '<значение POSTGRES_PASSWORD из .env>';"
+docker compose up -d --force-recreate bot
+```
+
+Файрвол: наружу должны смотреть только 22, 80 и 443.
+
+```bash
+sudo ufw default deny incoming && sudo ufw allow OpenSSH && sudo ufw allow 80,443/tcp && sudo ufw enable
+sudo ss -tlnp   # убедиться, что 5432 и 3000 не слушают на 0.0.0.0
 ```
 
 ## 3. Запуск

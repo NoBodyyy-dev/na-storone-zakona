@@ -213,11 +213,37 @@ export function confirm(advocateId, serviceId, dKey, tKey) {
   };
 }
 
+/** Сколько будущих записей может держать один клиент одновременно. */
+const MAX_ACTIVE_BOOKINGS = Math.max(1, Number(process.env.MAX_ACTIVE_BOOKINGS || 2) || 2);
+
 export async function commit(platform, user, advocateId, serviceId, dKey, tKey) {
   const adv = getAdvocate(advocateId);
   const svc = getService(advocateId, serviceId);
   const at = slotAt(dKey, tKey);
   if (!adv || !svc || !at) return notFound();
+
+  // Payload кнопки клиент может подделать: время сверяем с расписанием
+  // (рабочие часы, не раньше чем через 2 часа), а не только с форматом.
+  const date = dateFromKey(dKey);
+  const taken = takenIndex(await repo.takenSlots(advocateId));
+  if (!date || !freeSlots(date, taken).some((s) => s.key === tKey)) {
+    return {
+      text: '<b>Это время недоступно</b>\n\nВыберите, пожалуйста, время из списка.',
+      buttons: [[{ label: 'Выбрать другое время', data: `svc|${advocateId}|${serviceId}` }], [{ label: 'В меню', data: 'menu' }]],
+    };
+  }
+
+  // Один аккаунт не должен занять всё расписание.
+  if ((await repo.countUserBookings(platform, user.id)) >= MAX_ACTIVE_BOOKINGS) {
+    return {
+      text: [
+        '<b>Достигнут лимит записей</b>',
+        '',
+        `У вас уже ${MAX_ACTIVE_BOOKINGS} активных записи. Отмените одну в разделе «Мои записи» или дождитесь приёма.`,
+      ].join('\n'),
+      buttons: [[{ label: '📋 Мои записи', data: 'my' }], [{ label: 'В меню', data: 'menu' }]],
+    };
+  }
 
   const record = await repo.createBooking({
     platform,

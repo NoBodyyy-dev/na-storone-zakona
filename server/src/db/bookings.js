@@ -42,6 +42,16 @@ export async function createBooking({ platform, userId, userName, advocateId, se
   }
 }
 
+/** Сколько будущих записей у пользователя — для лимита одновременных записей. */
+export async function countUserBookings(platform, userId) {
+  const { rows } = await query(
+    `SELECT COUNT(*)::int AS n FROM bookings
+      WHERE platform = $1 AND user_id = $2 AND slot_at >= now()`,
+    [platform, String(userId)],
+  );
+  return rows[0].n;
+}
+
 /** Будущие записи пользователя. */
 export async function listUserBookings(platform, userId) {
   const { rows } = await query(

@@ -1,11 +1,12 @@
 import { Bot } from 'grammy';
+import { limit } from '@grammyjs/ratelimiter';
 import { env } from '../config/env';
 import { logger } from '../logger/logger';
 import { BotContext } from './context';
 import { sessionMiddleware } from './middlewares/session';
 import { registerCommands } from './commands';
 import { handleSiteButton } from './handlers/start.handler';
-import { handleMyBookings } from './handlers/myBookings.handler';
+import { handleCancelCallback, handleMyBookings } from './handlers/myBookings.handler';
 import { handleBookingCallback } from './handlers/booking.callbacks';
 import { handleAdminCallback } from './handlers/admin.handler';
 import { startBooking, handleBookingText, isBookingTextStep, resetSession } from './conversations/booking.conversation';
@@ -13,6 +14,20 @@ import { mainMenuKeyboard } from './keyboards/keyboards';
 
 export function createBot(): Bot<BotContext> {
   const bot = new Bot<BotContext>(env.botToken);
+
+  // Флуд от одного аккаунта: больше 3 апдейтов в 2 секунды молча отбрасываем,
+  // не доходя ни до сессии, ни до базы.
+  bot.use(
+    limit({
+      timeFrame: 2000,
+      limit: 3,
+      onLimitExceeded: async (ctx) => {
+        if (ctx.callbackQuery) {
+          await ctx.answerCallbackQuery({ text: 'Слишком быстро. Подождите секунду.' }).catch(() => undefined);
+        }
+      },
+    }),
+  );
 
   bot.use(sessionMiddleware());
 
@@ -31,11 +46,12 @@ export function createBot(): Bot<BotContext> {
   bot.on('callback_query:data', async (ctx) => {
     try {
       if (await handleAdminCallback(ctx)) return;
+      if (await handleCancelCallback(ctx)) return;
       if (await handleBookingCallback(ctx)) return;
       await ctx.answerCallbackQuery();
     } catch (err) {
       // Что бы ни случилось внутри обработчика — кнопка не должна вечно "крутиться".
-      logger.error({ err }, 'Callback handling failed');
+      logger.error({ err, updateId: ctx.update.update_id }, 'Callback handling failed');
       await ctx.answerCallbackQuery({ text: 'Произошла ошибка, попробуйте ещё раз', show_alert: true }).catch(() => undefined);
     }
   });
@@ -55,7 +71,11 @@ export function createBot(): Bot<BotContext> {
   });
 
   bot.catch((err) => {
-    logger.error({ err: err.error, ctxUpdate: err.ctx.update }, 'Unhandled bot error');
+    // В лог — только идентификаторы, без текста сообщений: там ФИО и телефоны клиентов.
+    logger.error(
+      { err: err.error, updateId: err.ctx.update.update_id, chatId: err.ctx.chat?.id },
+      'Unhandled bot error',
+    );
   });
 
   return bot;

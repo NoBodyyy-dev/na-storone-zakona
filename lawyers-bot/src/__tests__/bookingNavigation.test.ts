@@ -1,10 +1,15 @@
 jest.mock('../database/repositories/booking.repository', () => ({
-  bookingRepository: { create: jest.fn(), findBusyTimes: jest.fn(), findBusyInRange: jest.fn() },
+  bookingRepository: {
+    create: jest.fn(),
+    findBusyTimes: jest.fn(),
+    findBusyInRange: jest.fn(),
+    countActiveByUser: jest.fn(async () => 0),
+  },
   SlotTakenError: class SlotTakenError extends Error {},
 }));
 
 jest.mock('../database/repositories/user.repository', () => ({
-  userRepository: { findOrCreate: jest.fn(), updateContact: jest.fn() },
+  userRepository: { findOrCreate: jest.fn(async () => ({ id: 1 })), updateContact: jest.fn() },
 }));
 
 jest.mock('../database/repositories/service.repository', () => ({
@@ -111,6 +116,7 @@ const lawyer = {
   specialization: 'уголовные и арбитражные дела',
   categories: ['criminal', 'arbitration', 'civil'],
   office_address: 'г. Краснодар, ул. Бабушкина, 248, оф. А218',
+  is_active: true,
 } as unknown as Lawyer;
 
 beforeEach(() => {

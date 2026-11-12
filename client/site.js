@@ -19,7 +19,89 @@
   };
 
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
+
+  // Запасные варианты для картинок — без inline-обработчиков, чтобы работала
+  // строгая Content-Security-Policy. Картинка могла сломаться ещё до того,
+  // как выполнился этот скрипт, поэтому проверяем и уже загруженные.
+  function onImgError(img, handler){
+    if(img.complete && img.naturalWidth === 0) handler(img);
+    else img.addEventListener('error', function(){ handler(img); }, { once: true });
+  }
+  document.querySelectorAll('img[data-crest]').forEach(function(img){ onImgError(img, window.crest); });
+  document.querySelectorAll('img[data-hide-on-error]').forEach(function(img){ onImgError(img, function(i){ i.remove(); }); });
+
+  // ===== Cookie и Яндекс Метрика =====
+  // Метрика загружается только после «Принять» в уведомлении о cookie.
+  // Номер счётчика — из metrika.yandex.ru; пока 0, Метрика не подключается.
+  var METRIKA_ID = 0;
+  var CONSENT_KEY = 'nsz-cookie';
+  var CONSENT_TTL = 365 * 24 * 3600 * 1000; // через год спрашиваем снова
+  var metrikaLoaded = false;
+
+  function readConsent(){
+    try {
+      var c = JSON.parse(localStorage.getItem(CONSENT_KEY));
+      if(c && (c.v === 'all' || c.v === 'necessary') && Date.now() - c.t < CONSENT_TTL) return c.v;
+    } catch(e){}
+    return null;
+  }
+  function saveConsent(v){
+    try { localStorage.setItem(CONSENT_KEY, JSON.stringify({v:v, t:Date.now()})); } catch(e){}
+  }
+  function loadMetrika(){
+    if(metrikaLoaded || !METRIKA_ID) return;
+    metrikaLoaded = true;
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+      (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+    window.ym(METRIKA_ID, 'init', {clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true});
+  }
+  // при отзыве согласия стираем cookie Метрики (_ym_uid, _ym_d и др.)
+  function dropMetrikaCookies(){
+    document.cookie.split(';').forEach(function(c){
+      var name = c.split('=')[0].trim();
+      if(name.indexOf('_ym') !== 0) return;
+      var exp = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      document.cookie = exp;
+      document.cookie = exp + '; domain=.' + location.hostname.replace(/^www\./, '');
+    });
+  }
+
+  function showCookieBar(){
+    if(document.querySelector('.cookie-bar')) return;
+    var bar = document.createElement('div');
+    bar.className = 'cookie-bar';
+    bar.setAttribute('role', 'region');
+    bar.setAttribute('aria-label', 'Уведомление о cookie');
+    bar.innerHTML = '<p>Мы используем cookie и Яндекс Метрику, чтобы понимать, как посетители пользуются сайтом, и улучшать его. '
+      + 'Аналитика включится только с вашего согласия. Подробнее — в <a href="/politika-konfidencialnosti#cookie">политике конфиденциальности</a>.</p>'
+      + '<div class="cookie-actions"><button type="button" class="btn-ghost" data-cookie="necessary">Отклонить</button>'
+      + '<button type="button" class="btn-primary sm" data-cookie="all">Принять</button></div>';
+    bar.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-cookie]');
+      if(!btn) return;
+      var v = btn.getAttribute('data-cookie');
+      saveConsent(v);
+      bar.remove();
+      if(v === 'all') loadMetrika();
+      else {
+        dropMetrikaCookies();
+        // уже запущенную Метрику не остановить — перезагружаем страницу без неё
+        if(metrikaLoaded) location.reload();
+      }
+    });
+    document.body.appendChild(bar);
+  }
+
   ready(function(){
+    // Cookie: применяем сохранённый выбор или спрашиваем
+    var consent = readConsent();
+    if(consent === 'all') loadMetrika();
+    else if(!consent) showCookieBar();
+    document.querySelectorAll('[data-cookie-settings]').forEach(function(b){
+      b.addEventListener('click', showCookieBar);
+    });
+
     // Мобильное меню
     var burger = document.querySelector('.nav-burger');
     var links = document.querySelector('.nav-links');

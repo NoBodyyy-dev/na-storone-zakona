@@ -81,6 +81,51 @@ export class BookingRepository {
     return rows;
   }
 
+  async findById(id: number): Promise<Booking | null> {
+    const { rows } = await pool.query<Booking>(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE id = $1`, [id]);
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Будущие (ещё не прошедшие) записи клиента. По ним ограничивается число
+   * одновременных записей, чтобы один аккаунт не занял всё расписание.
+   */
+  async countActiveByUser(userId: number): Promise<number> {
+    const { rows } = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM bookings
+       WHERE user_id = $1 AND status != 'cancelled'
+         AND booking_date IS NOT NULL
+         AND (booking_date + booking_time) >= NOW()`,
+      [userId],
+    );
+    return Number(rows[0].count);
+  }
+
+  /**
+   * Отменяет запись клиента. Чужую отменить нельзя: user_id в условии,
+   * а не только id из callback-данных кнопки.
+   */
+  async cancelByUser(id: number, userId: number): Promise<Booking | null> {
+    const { rows } = await pool.query<Booking>(
+      `UPDATE bookings SET status = 'cancelled'
+       WHERE id = $1 AND user_id = $2 AND status != 'cancelled'
+       RETURNING ${BOOKING_COLUMNS}`,
+      [id, userId],
+    );
+    return rows[0] ?? null;
+  }
+
+  /** Отмена администратором — любой записи. */
+  async cancelById(id: number): Promise<Booking | null> {
+    const { rows } = await pool.query<Booking>(
+      `UPDATE bookings SET status = 'cancelled'
+       WHERE id = $1 AND status != 'cancelled'
+       RETURNING ${BOOKING_COLUMNS}`,
+      [id],
+    );
+    return rows[0] ?? null;
+  }
+
   /** Заявки, созданные в указанный день (по локальной дате сервера). */
   async findByCreatedDate(date: string): Promise<Booking[]> {
     const { rows } = await pool.query<Booking>(

@@ -16,7 +16,7 @@
     "@maxhub/max-bot-api": "^0.2.5",
     "dotenv": "^17.4.2",
     "grammy": "^1.45.1",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.2.1",
     "pg": "^8.22.0"
   },
   "type": "module",

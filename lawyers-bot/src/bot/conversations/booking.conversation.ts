@@ -16,7 +16,8 @@ import { userRepository } from '../../database/repositories/user.repository';
 import { serviceRepository } from '../../database/repositories/service.repository';
 import { lawyerRepository } from '../../database/repositories/lawyer.repository';
 import { SlotTakenError } from '../../database/repositories/booking.repository';
-import { bookingService } from '../../services/booking.service';
+import { BookingLimitError, SlotUnavailableError, bookingService } from '../../services/booking.service';
+import { env } from '../../config/env';
 import { scheduleService } from '../../services/schedule.service';
 import { notificationService } from '../../services/notification.service';
 import { validateFullName, normalizeFullName, validatePhone, normalizePhone } from '../utils/validators';
@@ -49,7 +50,9 @@ function renderAskName(ctx: BotContext): RenderedStep {
     text:
       `${heading(ctx, 'ask_name', 'Ваше имя')}\n\n` +
       'Как к вам обращаться? Напишите полное ФИО.\n' +
-      '<i>Например: Иванов Иван Иванович</i>',
+      '<i>Например: Иванов Иван Иванович</i>\n\n' +
+      `<i>Отправляя ФИО и телефон, вы соглашаетесь с <a href="${env.privacyUrl}">политикой обработки персональных данных</a>. ` +
+      'Данные нужны только для связи по вашей записи.</i>',
   };
 }
 
@@ -306,7 +309,25 @@ function stepsWord(count: number): string {
   return `${count} ${plural === 'шаг' ? 'короткий' : 'коротких'} ${plural}`;
 }
 
+/**
+ * Лимит одновременных записей проверяется до первого шага, чтобы клиент
+ * не проходил все экраны впустую. Окончательная проверка — при подтверждении.
+ */
+async function limitReached(ctx: BotContext): Promise<boolean> {
+  if (!ctx.from) return false;
+  const user = await userRepository.findOrCreate(ctx.from.id, ctx.from.username ?? null);
+  if (await bookingService.canBookMore(user.id)) return false;
+  resetSession(ctx);
+  await ctx.reply(
+    `У вас уже ${env.maxActiveBookings} ${env.maxActiveBookings === 1 ? 'активная запись' : 'активные записи'}. ` +
+      'Чтобы записаться ещё раз, отмените одну из них в разделе «📋 Мои записи» или дождитесь консультации.',
+    { reply_markup: mainMenuKeyboard() },
+  );
+  return true;
+}
+
 export async function startBooking(ctx: BotContext): Promise<void> {
+  if (await limitReached(ctx)) return;
   resetSession(ctx);
   await ctx.reply(`Запись на консультацию — ${stepsWord(stepsTotal(false))}.`, {
     reply_markup: { remove_keyboard: true },
@@ -316,6 +337,7 @@ export async function startBooking(ctx: BotContext): Promise<void> {
 
 /** Переход по ссылке вида /start?lawyer=1 — адвокат уже выбран. */
 export async function startBookingWithLawyer(ctx: BotContext, lawyerId: number): Promise<void> {
+  if (await limitReached(ctx)) return;
   resetSession(ctx);
   ctx.session.draft.lawyerId = lawyerId;
   ctx.session.lawyerFixed = true;
@@ -385,8 +407,20 @@ export async function askLawyerStep(ctx: BotContext, category: BookableCategory)
   await askStep(ctx, 'ask_lawyer');
 }
 
+/** Подделанная кнопка или устаревший экран — просим выбрать заново. */
+async function rejectChoice(ctx: BotContext, text: string): Promise<void> {
+  await ctx.answerCallbackQuery({ text, show_alert: true }).catch(() => undefined);
+}
+
 /** Выбран адвокат — показываем варианты консультации. */
 export async function askServiceStep(ctx: BotContext, lawyerId: number): Promise<void> {
+  // Id приходит из callback-данных, которые клиент может подменить:
+  // записать можно только к существующему и действующему адвокату.
+  const lawyer = await lawyerRepository.findById(lawyerId);
+  if (!lawyer || lawyer.is_active === false) {
+    await rejectChoice(ctx, 'Этот адвокат сейчас не принимает. Выберите другого.');
+    return;
+  }
   ctx.session.draft.lawyerId = lawyerId;
   await askStep(ctx, 'ask_service');
 }
@@ -394,33 +428,53 @@ export async function askServiceStep(ctx: BotContext, lawyerId: number): Promise
 /** Выбрана консультация — показываем свободные даты адвоката. */
 export async function askDateStep(ctx: BotContext, serviceId: number): Promise<void> {
   const draft = ctx.session.draft;
-  draft.serviceId = serviceId;
   if (!draft.lawyerId) {
     await expireSession(ctx);
     return;
   }
-  if (!draft.category) {
+  const service = await serviceRepository.findById(serviceId);
+  if (!service || service.is_active === false) {
+    await rejectChoice(ctx, 'Эта услуга сейчас недоступна. Выберите другую.');
+    return;
+  }
+  draft.serviceId = serviceId;
+  if (!draft.category && isBookableCategory(service.category)) {
     // Запись по ссылке с сайта: вид дела берём из выбранной услуги.
-    const service = await serviceRepository.findById(serviceId);
-    if (service && isBookableCategory(service.category)) {
-      draft.category = service.category;
-    }
+    draft.category = service.category;
   }
   await askStep(ctx, 'ask_date');
 }
 
 /** Выбрана дата — показываем свободное время этого дня. */
 export async function askTimeStep(ctx: BotContext, date: string): Promise<void> {
-  ctx.session.draft.date = date;
-  if (!ctx.session.draft.lawyerId) {
+  const lawyerId = ctx.session.draft.lawyerId;
+  if (!lawyerId) {
     await expireSession(ctx);
     return;
   }
+  // Дата сверяется с реальным окном записи, а не только с форматом:
+  // прошедший день, выходной адвоката или 2030 год из подделанной кнопки не пройдут.
+  const dates = await scheduleService.availableDates(lawyerId);
+  if (!dates.includes(date)) {
+    await rejectChoice(ctx, 'На этот день записаться нельзя. Выберите дату из списка.');
+    return;
+  }
+  ctx.session.draft.date = date;
   await askStep(ctx, 'ask_time');
 }
 
 /** Выбрано время — показываем итоговую заявку с кнопкой «Записаться». */
 export async function askConfirmStep(ctx: BotContext, time: string): Promise<void> {
+  const { lawyerId, date } = ctx.session.draft;
+  if (!lawyerId || !date) {
+    await expireSession(ctx);
+    return;
+  }
+  const times = await scheduleService.availableTimes(lawyerId, date);
+  if (!times.includes(time)) {
+    await rejectChoice(ctx, 'Это время недоступно. Выберите время из списка.');
+    return;
+  }
   ctx.session.draft.time = time;
   await askStep(ctx, 'confirm');
 }
@@ -489,6 +543,32 @@ export async function finalizeBooking(ctx: BotContext): Promise<void> {
       const timeFrame = ctx.session.frames.pop();
       if (timeFrame) await purgeFrame(ctx, timeFrame);
       await askStep(ctx, 'ask_time');
+      return;
+    }
+    if (err instanceof SlotUnavailableError) {
+      // Экран устарел или кнопка подделана — слот уже вне расписания.
+      await ctx.answerCallbackQuery({
+        text: 'Это время больше недоступно. Выберите, пожалуйста, другое.',
+        show_alert: true,
+      });
+      const confirmFrame = ctx.session.frames.pop();
+      if (confirmFrame) await purgeFrame(ctx, confirmFrame);
+      draft.time = undefined;
+      draft.date = undefined;
+      const timeFrame = ctx.session.frames.pop();
+      if (timeFrame) await purgeFrame(ctx, timeFrame);
+      const dateFrame = ctx.session.frames.pop();
+      if (dateFrame) await purgeFrame(ctx, dateFrame);
+      await askStep(ctx, 'ask_date');
+      return;
+    }
+    if (err instanceof BookingLimitError) {
+      await ctx.answerCallbackQuery({
+        text: `У вас уже ${err.limit} активных записей. Отмените одну в разделе «Мои записи».`,
+        show_alert: true,
+      });
+      resetSession(ctx);
+      await ctx.reply('Главное меню:', { reply_markup: mainMenuKeyboard() });
       return;
     }
     throw err;

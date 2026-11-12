@@ -50,10 +50,11 @@ src/
 ## Локальный запуск
 
 1. Скопируйте `.env.example` в `.env` и заполните `BOT_TOKEN` (получить у [@BotFather](https://t.me/BotFather)) и `ADMIN_IDS` (Telegram ID администраторов, через запятую).
-2. Поднимите Postgres и бота:
+2. Поднимите Postgres для разработки (порт только на localhost, пароль должен совпадать с `DATABASE_URL` в `.env`):
 
 ```bash
-docker compose up -d db
+docker run -d --name nsz-pg -p 127.0.0.1:5432:5432 \
+  -e POSTGRES_USER=lawyers_bot -e POSTGRES_PASSWORD=lawyers_bot -e POSTGRES_DB=lawyers_bot postgres:16-alpine
 ```
 
 3. Установите зависимости и накатите миграции с сид-данными:
@@ -75,9 +76,11 @@ npm run dev
 
 ## Продакшен-деплой (Docker)
 
-1. На сервере создайте `.env` (см. `.env.example`), укажите боевой `BOT_TOKEN` и `ADMIN_IDS`.
-2. Если бот будет работать через webhook (рекомендуется для прод), укажите `WEBHOOK_URL=https://ваш-домен/webhook` — домен должен быть доступен по HTTPS (например, через nginx/Caddy как reverse proxy к порту 3000).
-3. Соберите и запустите:
+Боевой `docker-compose.yml` лежит в корне репозитория (nginx + бот + Postgres), подробности — в `DEPLOY.md`.
+
+1. На сервере создайте `lawyers-bot/.env` (см. `.env.example`), укажите боевой `BOT_TOKEN` и `ADMIN_IDS`, а в корневом `.env` — `POSTGRES_PASSWORD`.
+2. Если бот будет работать через webhook, укажите `WEBHOOK_URL=https://ваш-домен/webhook` и обязательно `WEBHOOK_SECRET` (`openssl rand -hex 32`): без секрета любой сможет слать боту поддельные апдейты от имени администраторов. nginx из `deploy/nginx.conf` пропускает на `/webhook` только POST с адресов Telegram.
+3. Соберите и запустите из корня репозитория:
 
 ```bash
 docker compose up -d --build

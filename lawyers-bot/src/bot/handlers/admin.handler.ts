@@ -4,11 +4,22 @@ import { env } from '../../config/env';
 import { bookingRepository } from '../../database/repositories/booking.repository';
 import { lawyerRepository } from '../../database/repositories/lawyer.repository';
 import { serviceRepository } from '../../database/repositories/service.repository';
+import { bookingService } from '../../services/booking.service';
 import { formatBookingSlot, formatDateHuman, formatDateTimeHuman, toDateStr } from '../utils/dates';
 import { Booking, CATEGORY_LABELS, isBookableCategory } from '../../types';
 
 function isAdmin(telegramId: number | undefined): boolean {
   return !!telegramId && env.adminIds.includes(telegramId);
+}
+
+/** Кнопка отмены под каждой записью списка. */
+function cancelKeyboard(bookings: Booking[]): InlineKeyboard | undefined {
+  if (bookings.length === 0) return undefined;
+  const kb = new InlineKeyboard();
+  bookings.forEach((b) => {
+    kb.text(`✕ ${formatBookingSlot(b)} — ${b.client_full_name}`, `admin:cancel:${b.id}`).row();
+  });
+  return kb;
 }
 
 function adminMenuKeyboard(): InlineKeyboard {
@@ -67,6 +78,23 @@ export async function handleAdminCallback(ctx: BotContext): Promise<boolean> {
     const bookings = await bookingRepository.findByBookingDate(today);
     await ctx.reply(
       await bookingsListText(bookings, `📅 Консультации на ${formatDateHuman(today)}`),
+      { reply_markup: cancelKeyboard(bookings) },
+    );
+    return true;
+  }
+
+  // Отмена записи администратором: например, клиент не дозвонился или спам.
+  if (data.startsWith('admin:cancel:')) {
+    const id = Number(data.slice('admin:cancel:'.length));
+    const cancelled = Number.isInteger(id) ? await bookingService.cancelByAdmin(id) : null;
+    if (!cancelled) {
+      await ctx.reply('Запись не найдена или уже отменена.');
+      return true;
+    }
+    await ctx.editMessageReplyMarkup({ reply_markup: undefined }).catch(() => undefined);
+    await ctx.reply(
+      `❌ Запись отменена: ${formatBookingSlot(cancelled)} — ${cancelled.client_full_name} (${cancelled.client_phone}). ` +
+        'Клиенту об отмене сообщите, пожалуйста, по телефону.',
     );
     return true;
   }

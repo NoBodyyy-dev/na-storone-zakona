@@ -9,7 +9,7 @@ async function main(): Promise<void> {
   logger.info('Database connection established');
 
   const bot = createBot();
-  const useWebhook = Boolean(process.env.WEBHOOK_URL);
+  const useWebhook = Boolean(env.webhookUrl);
 
   const app = createServer(bot, useWebhook);
   app.listen(env.port, () => {
@@ -17,11 +17,15 @@ async function main(): Promise<void> {
   });
 
   if (useWebhook) {
-    await bot.api.setWebhook(process.env.WEBHOOK_URL!);
-    logger.info(`Webhook set to ${process.env.WEBHOOK_URL}`);
+    await bot.api.setWebhook(env.webhookUrl!, {
+      secret_token: env.webhookSecret!,
+      allowed_updates: ['message', 'callback_query'],
+    });
+    logger.info(`Webhook set to ${env.webhookUrl}`);
   } else {
     await bot.api.deleteWebhook().catch(() => undefined);
     void bot.start({
+      allowed_updates: ['message', 'callback_query'],
       onStart: () => logger.info('Bot started in long-polling mode'),
     });
   }

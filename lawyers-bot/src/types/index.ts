@@ -163,6 +163,8 @@ export interface SessionData {
   frames: StepFrame[];
   lawyerFixed?: boolean;
   adminView?: string;
+  /** Момент последнего изменения — по нему хранилище выбрасывает брошенные сессии. */
+  updatedAt?: number;
 }
 
 /** Короткая подпись вида дела — для подписей на кнопках и в строках каталога. */
