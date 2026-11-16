@@ -4,3 +4,4 @@ node_modules/
 *.log
 dist/
 lawyers-bot/data/sessions.json
+deploy/xray/config.json

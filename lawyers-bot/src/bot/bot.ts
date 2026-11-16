@@ -1,5 +1,7 @@
 import { Bot } from 'grammy';
 import { limit } from '@grammyjs/ratelimiter';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import { env } from '../config/env';
 import { logger } from '../logger/logger';
 import { BotContext } from './context';
@@ -12,8 +14,20 @@ import { handleAdminCallback } from './handlers/admin.handler';
 import { startBooking, handleBookingText, isBookingTextStep, resetSession } from './conversations/booking.conversation';
 import { mainMenuKeyboard } from './keyboards/keyboards';
 
+// Из российского дата-центра api.telegram.org может быть недоступен напрямую,
+// поэтому запросы к Telegram можно пустить через прокси (TELEGRAM_PROXY_URL).
+function telegramProxyAgent(): HttpsProxyAgent<string> | SocksProxyAgent | undefined {
+  const url = env.telegramProxyUrl;
+  if (!url) return undefined;
+  return url.startsWith('socks') ? new SocksProxyAgent(url) : new HttpsProxyAgent(url);
+}
+
 export function createBot(): Bot<BotContext> {
-  const bot = new Bot<BotContext>(env.botToken);
+  const agent = telegramProxyAgent();
+  if (agent) logger.info('Telegram API requests go through proxy');
+  const bot = new Bot<BotContext>(env.botToken, {
+    client: agent ? { baseFetchConfig: { agent, compress: true } } : undefined,
+  });
 
   // Флуд от одного аккаунта: больше 3 апдейтов в 2 секунды молча отбрасываем,
   // не доходя ни до сессии, ни до базы.

@@ -33,6 +33,8 @@ export const env = {
   logLevel: process.env.LOG_LEVEL ?? 'info',
   webhookUrl,
   webhookSecret: process.env.WEBHOOK_SECRET ?? null,
+  /** Прокси для запросов к api.telegram.org: socks5://host:port или http://host:port. */
+  telegramProxyUrl: process.env.TELEGRAM_PROXY_URL?.trim() || null,
   /** Сколько будущих записей может держать один клиент одновременно. */
   maxActiveBookings: Math.max(1, Number(process.env.MAX_ACTIVE_BOOKINGS ?? 2) || 2),
 };

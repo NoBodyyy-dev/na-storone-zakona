@@ -54,6 +54,18 @@ services:
     depends_on:
       - bot
 
+  # Прокси к Telegram (VLESS/Shadowsocks/...), если api.telegram.org недоступен с сервера.
+  # Включается через COMPOSE_PROFILES=proxy в .env; конфиг — deploy/xray/config.json (не в git).
+  # Наружу порт не публикуем: SOCKS5 на xray:1080 доступен только контейнерам.
+  xray:
+    image: teddysun/xray:26.10.31
+    profiles: ["proxy"]
+    restart: unless-stopped
+    volumes:
+      - ./deploy/xray/config.json:/etc/xray/config.json:ro
+    expose:
+      - "1080"
+
   # выпуск/продление сертификата Let's Encrypt (запускать по требованию, см. DEPLOY.md)
   certbot:
     image: certbot/certbot
