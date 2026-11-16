@@ -9,6 +9,23 @@ function required(name: string): string {
 }
 
 const webhookUrl = process.env.WEBHOOK_URL?.trim() || null;
+const siteUrl = process.env.SITE_URL ?? 'https://ns-zakona.ru';
+
+/**
+ * Какой Telegram-аккаунт принадлежит какому адвокату: "1:123456789,2:987654321"
+ * (id адвоката из таблицы lawyers : Telegram ID). По нему Mini App
+ * показывает адвокату панель с его заявками.
+ */
+function parseLawyerTelegramIds(raw: string | undefined): Map<number, number> {
+  const byTelegramId = new Map<number, number>();
+  for (const pair of (raw ?? '').split(',')) {
+    const [lawyerId, telegramId] = pair.split(':').map((part) => Number(part.trim()));
+    if (Number.isInteger(lawyerId) && Number.isInteger(telegramId) && lawyerId > 0 && telegramId > 0) {
+      byTelegramId.set(telegramId, lawyerId);
+    }
+  }
+  return byTelegramId;
+}
 
 // Вебхук без секрета принимал бы «апдейты» от кого угодно — в том числе
 // от имени администраторов. Поэтому секрет обязателен, как только задан URL.
@@ -25,9 +42,12 @@ export const env = {
     .map((id) => id.trim())
     .filter(Boolean)
     .map(Number),
-  siteUrl: process.env.SITE_URL ?? 'https://ns-zakona.ru',
-  /** Ссылка на политику обработки персональных данных — показывается перед вводом ФИО. */
-  privacyUrl: process.env.PRIVACY_URL ?? `${process.env.SITE_URL ?? 'https://ns-zakona.ru'}/politika-konfidencialnosti`,
+  siteUrl,
+  /** Ссылка на политику обработки персональных данных — показывается в форме записи. */
+  privacyUrl: process.env.PRIVACY_URL ?? `${siteUrl}/politika-konfidencialnosti`,
+  /** Адрес Mini App с формой записи. Telegram открывает только HTTPS. */
+  webappUrl: process.env.WEBAPP_URL?.trim() || `${siteUrl}/app/`,
+  lawyerByTelegramId: parseLawyerTelegramIds(process.env.LAWYER_TELEGRAM_IDS),
   emblemPath: process.env.EMBLEM_PATH ?? 'assets/emblem.png',
   timezone: process.env.TZ_NAME ?? 'Europe/Moscow',
   logLevel: process.env.LOG_LEVEL ?? 'info',

@@ -7,6 +7,23 @@ const BOOKING_COLUMNS =
    to_char(booking_date, 'YYYY-MM-DD') AS booking_date,
    to_char(booking_time, 'HH24:MI') AS booking_time`;
 
+/** Запись для панели адвоката — сразу с названием услуги и именем адвоката. */
+export interface PanelBooking extends Booking {
+  lawyer_name: string;
+  service_title: string;
+  price_label: string;
+}
+
+const PANEL_SELECT = `
+  SELECT b.id, b.user_id, b.lawyer_id, b.service_id, b.client_full_name, b.client_phone,
+         b.category, b.status, b.created_at,
+         to_char(b.booking_date, 'YYYY-MM-DD') AS booking_date,
+         to_char(b.booking_time, 'HH24:MI') AS booking_time,
+         l.full_name AS lawyer_name, s.title AS service_title, s.price_label
+  FROM bookings b
+  JOIN lawyers l ON l.id = b.lawyer_id
+  JOIN services s ON s.id = b.service_id`;
+
 /** Слот заняли между показом клавиатуры и подтверждением записи. */
 export class SlotTakenError extends Error {
   constructor() {
@@ -76,6 +93,17 @@ export class BookingRepository {
       `SELECT ${BOOKING_COLUMNS} FROM bookings
        WHERE user_id = $1 AND status != 'cancelled'
        ORDER BY created_at DESC`,
+      [userId],
+    );
+    return rows;
+  }
+
+  /** Действующие записи клиента с услугой и адвокатом — для вкладки «Мои записи». */
+  async findForUserWithDetails(userId: number): Promise<PanelBooking[]> {
+    const { rows } = await pool.query<PanelBooking>(
+      `${PANEL_SELECT}
+       WHERE b.user_id = $1 AND b.status != 'cancelled'
+       ORDER BY b.booking_date DESC NULLS LAST, b.booking_time DESC`,
       [userId],
     );
     return rows;
@@ -155,6 +183,23 @@ export class BookingRepository {
        WHERE booking_date = $1 AND status != 'cancelled'
        ORDER BY booking_time`,
       [date],
+    );
+    return rows;
+  }
+
+  /**
+   * Записи для панели: предстоящие (с сегодняшнего дня, ближайшие сверху)
+   * или прошедшие (последние 100). lawyerId = null — все адвокаты (для администратора).
+   */
+  async findForPanel(lawyerId: number | null, upcoming: boolean): Promise<PanelBooking[]> {
+    const { rows } = await pool.query<PanelBooking>(
+      `${PANEL_SELECT}
+       WHERE b.status != 'cancelled'
+         AND ($1::int IS NULL OR b.lawyer_id = $1)
+         AND ${upcoming ? '(b.booking_date IS NULL OR b.booking_date >= CURRENT_DATE)' : 'b.booking_date < CURRENT_DATE'}
+       ORDER BY ${upcoming ? 'b.booking_date NULLS FIRST, b.booking_time' : 'b.booking_date DESC, b.booking_time DESC'}
+       LIMIT 100`,
+      [lawyerId],
     );
     return rows;
   }

@@ -37,10 +37,27 @@ ADMIN_IDS=<telegram id администраторов через запятую>
 PORT=3000
 TZ_NAME=Europe/Moscow
 MAX_ACTIVE_BOOKINGS=2
+# Адвокаты: id из таблицы lawyers : Telegram ID (1 — Богданов, 2 — Богданова)
+LAWYER_TELEGRAM_IDS=1:<telegram id>,2:<telegram id>
 # DATABASE_URL задаётся в docker-compose, в .env можно не указывать
 # WEBHOOK_URL — оставить пустым (long polling) или https://ДОМЕН/webhook
 # WEBHOOK_SECRET — обязателен вместе с WEBHOOK_URL: openssl rand -hex 32
+# TELEGRAM_PROXY_URL — если api.telegram.org недоступен с сервера (см. ниже)
 ```
+
+Свой Telegram ID адвокат может узнать у @userinfobot.
+
+**Запись идёт через Telegram Mini App** — форма по адресу `https://ДОМЕН/app/`,
+её отдаёт бот, nginx проксирует `/app/` и `/api/`. Telegram открывает Mini App
+только по HTTPS, поэтому кнопки записи заработают после шага 4 (домен и сертификат).
+В @BotFather ничего настраивать не нужно: кнопку «Записаться» в меню бот ставит сам
+при запуске. Адвокаты из `LAWYER_TELEGRAM_IDS` видят во вкладке «Заявки» своих
+клиентов, администраторы из `ADMIN_IDS` — всех.
+
+**Если Telegram недоступен с сервера**, бот ходит к нему через прокси:
+скопировать `deploy/xray/config.example.json` в `deploy/xray/config.json`,
+вписать данные VLESS-подключения, в корневой `.env` добавить
+`COMPOSE_PROFILES=proxy`, а в `lawyers-bot/.env` — `TELEGRAM_PROXY_URL=socks5://xray:1080`.
 
 **Если база уже была поднята со старым паролем `lawyers_bot`** (volume `db_data`
 существует), новый пароль из `.env` сам по себе не применится — Postgres берёт

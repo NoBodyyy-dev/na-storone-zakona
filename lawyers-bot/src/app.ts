@@ -11,6 +11,16 @@ async function main(): Promise<void> {
   const bot = createBot();
   const useWebhook = Boolean(env.webhookUrl);
 
+  // Кнопка «Записаться» слева от поля ввода открывает Mini App из любого места чата.
+  // Telegram принимает только HTTPS — локально без него просто пропускаем.
+  if (env.webappUrl.startsWith('https://')) {
+    await bot.api
+      .setChatMenuButton({
+        menu_button: { type: 'web_app', text: 'Записаться', web_app: { url: env.webappUrl } },
+      })
+      .catch((err) => logger.warn({ err }, 'Failed to set chat menu button'));
+  }
+
   const app = createServer(bot, useWebhook);
   app.listen(env.port, () => {
     logger.info(`HTTP server listening on port ${env.port}`);

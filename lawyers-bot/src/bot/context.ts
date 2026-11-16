@@ -1,4 +1,4 @@
-import { Context, SessionFlavor } from 'grammy';
-import { SessionData } from '../types';
+import { Context } from 'grammy';
 
-export type BotContext = Context & SessionFlavor<SessionData>;
+/** Бот справочный: запись живёт в Mini App, поэтому сессии в чате не нужны. */
+export type BotContext = Context;

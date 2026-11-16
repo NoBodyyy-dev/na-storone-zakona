@@ -13,5 +13,6 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY assets ./assets
+COPY webapp ./webapp
 EXPOSE 3000
 CMD ["node", "dist/app.js"]

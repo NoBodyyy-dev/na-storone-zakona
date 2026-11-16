@@ -86,10 +86,6 @@ export interface Booking {
 export interface BookingDraft {
   fullName?: string;
   phone?: string;
-  /**
-   * В обычной записи клиент выбирает вид дела сам, а при переходе по ссылке
-   * с сайта вид дела берётся из категории выбранной услуги.
-   */
   category?: BookableCategory;
   lawyerId?: number;
   serviceId?: number;
@@ -97,74 +93,6 @@ export interface BookingDraft {
   date?: string;
   /** HH:MM */
   time?: string;
-}
-
-/**
- * Экраны записи по порядку:
- * ФИО → телефон → вид дела → адвокат → услуга → дата → время → заявка.
- *
- * Проблему клиент не описывает и адвокат автоматически не подбирается:
- * либо адвокат приходит из ссылки с сайта (`?start=lawyer1`) — тогда шаги
- * «вид дела» и «адвокат» пропускаются, а вид дела берётся из услуги, —
- * либо клиент выбирает вид дела и затем адвоката, ведущего такие дела.
- */
-export const BOOKING_STEPS = [
-  'ask_name',
-  'ask_phone',
-  'ask_category',
-  'ask_lawyer',
-  'ask_service',
-  'ask_date',
-  'ask_time',
-  'confirm',
-] as const;
-
-export type BookingStep = 'idle' | (typeof BOOKING_STEPS)[number];
-
-/** Шаги, которые пропускаются, когда адвокат пришёл из ссылки с сайта. */
-const LAWYER_FIXED_SKIPPED: readonly BookingStep[] = ['ask_category', 'ask_lawyer'];
-
-/**
- * Шаги, которые реально увидит клиент: при переходе по ссылке с конкретным
- * адвокатом выбор вида дела и адвоката пропускается — шагов шесть, а не восемь.
- */
-export function visibleSteps(lawyerFixed: boolean): readonly BookingStep[] {
-  return lawyerFixed ? BOOKING_STEPS.filter((s) => !LAWYER_FIXED_SKIPPED.includes(s)) : BOOKING_STEPS;
-}
-
-/** Номер шага для индикатора «Шаг N из M». */
-export function stepNumber(step: BookingStep, lawyerFixed: boolean): number {
-  const index = visibleSteps(lawyerFixed).indexOf(step);
-  return index === -1 ? 0 : index + 1;
-}
-
-export function stepsTotal(lawyerFixed: boolean): number {
-  return visibleSteps(lawyerFixed).length;
-}
-
-/**
- * Один экран записи и все сообщения, которые он оставил в чате.
- * Кнопка «Назад» удаляет их, поэтому идентификаторы нужно помнить.
- */
-export interface StepFrame {
-  step: BookingStep;
-  /** Сообщение бота с вопросом. */
-  questionMsgId?: number;
-  /** Ответ пользователя (для шагов, где он пишет текстом). */
-  answerMsgId?: number;
-  /** Подсказки об ошибках ввода и неудачные попытки ответа. */
-  strayMsgIds?: number[];
-}
-
-export interface SessionData {
-  step: BookingStep;
-  draft: BookingDraft;
-  /** Стек пройденных экранов — основа навигации «Назад». */
-  frames: StepFrame[];
-  lawyerFixed?: boolean;
-  adminView?: string;
-  /** Момент последнего изменения — по нему хранилище выбрасывает брошенные сессии. */
-  updatedAt?: number;
 }
 
 /** Короткая подпись вида дела — для подписей на кнопках и в строках каталога. */

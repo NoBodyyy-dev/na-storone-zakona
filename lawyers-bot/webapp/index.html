@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex">
+  <title>Запись к адвокату — «На стороне Закона»</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="app.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <img class="emblem" src="emblem.png" alt="" width="44" height="44">
+    <div>
+      <p class="eyebrow">Коллегия адвокатов</p>
+      <h1>«На стороне Закона»</h1>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" hidden>
+    <button role="tab" data-tab="book" aria-selected="true">Запись</button>
+    <button role="tab" data-tab="mine" aria-selected="false">Мои записи</button>
+    <button role="tab" data-tab="panel" aria-selected="false" hidden>Заявки</button>
+  </nav>
+
+  <main id="view" aria-live="polite">
+    <p class="loading">Загрузка…</p>
+  </main>
+
+  <div class="bottom-bar" id="bottom-bar" hidden>
+    <p class="form-error" id="form-error" role="alert"></p>
+    <button class="btn-primary" id="submit" type="button" disabled>Записаться</button>
+  </div>
+</body>
+</html>
