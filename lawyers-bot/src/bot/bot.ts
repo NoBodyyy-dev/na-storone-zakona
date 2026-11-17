@@ -19,7 +19,8 @@ import { handleAdminCallback } from './handlers/admin.handler';
 import { MENU, mainMenuKeyboard } from './keyboards/keyboards';
 
 // Из российского дата-центра api.telegram.org может быть недоступен напрямую,
-// поэтому запросы к Telegram можно пустить через прокси (TELEGRAM_PROXY_URL).
+// поэтому запросы к Telegram можно пустить через прокси (TELEGRAM_PROXY_URL)
+// или через другой адрес Bot API (TELEGRAM_API_ROOT, например воркер Cloudflare).
 function telegramProxyAgent(): HttpsProxyAgent<string> | SocksProxyAgent | undefined {
   const url = env.telegramProxyUrl;
   if (!url) return undefined;
@@ -29,8 +30,12 @@ function telegramProxyAgent(): HttpsProxyAgent<string> | SocksProxyAgent | undef
 export function createBot(): Bot<BotContext> {
   const agent = telegramProxyAgent();
   if (agent) logger.info('Telegram API requests go through proxy');
+  if (env.telegramApiRoot) logger.info('Telegram API requests go through custom API root');
   const bot = new Bot<BotContext>(env.botToken, {
-    client: agent ? { baseFetchConfig: { agent, compress: true } } : undefined,
+    client: {
+      ...(agent ? { baseFetchConfig: { agent, compress: true } } : {}),
+      ...(env.telegramApiRoot ? { apiRoot: env.telegramApiRoot } : {}),
+    },
   });
 
   // Флуд от одного аккаунта: больше 3 апдейтов в 2 секунды молча отбрасываем,

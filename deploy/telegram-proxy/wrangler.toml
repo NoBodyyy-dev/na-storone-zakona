@@ -1,0 +1,7 @@
+name = "ns-zakona-telegram-proxy"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# ID бота — число до двоеточия в BOT_TOKEN. Не секрет (его видит любой, кто пишет боту), но без токена не даёт ничего.
+BOT_ID = "8908807377"
